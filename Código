@@ -1,0 +1,71 @@
+## Sistema Bancário
+menu = '''
+------ Escolha uma Operação -------
+[1] Depositar
+[2] Sacar
+[3] Extrato
+[4] Sair
+-----------------------------------
+'''
+saldo = 0
+valor_limites_p_saque = 500
+extrato = ""
+numero_saque = 0
+LIMITE_SAQUES = 3
+
+while True:
+
+    operação = int(input(menu))
+
+    if operação == 1:
+        deposito = float(input("Informe o valor que você gostaria de depositar: "))
+        if deposito > 0:
+            saldo += deposito
+            extrato += (f"Deposito Realizado: R$ {deposito:.2f}\n")
+            print(f"Depósito realizado,\n Seu saldo atual é de R$ {saldo}")
+        
+        else:
+            print("O valor do depósito não pode ser um valor negativo")
+
+    elif operação == 2:
+        saque = float(input("Informe qual o valor que você gostaria de sacar: "))
+
+        excedeu_saldo = saque > saldo
+
+        excedeu_limite_diario= saque > valor_limites_p_saque
+
+        excedeu_numero_saques= numero_saque > LIMITE_SAQUES
+        
+        if excedeu_saldo:
+            print ("Saque Inválido! O valor informado é maior doq o seu saldo em conta.")
+            
+        elif excedeu_limite_diario:
+            print ("Saque Inválido! O valor informado é maior doq o limte diário para saques, em sua conta.") 
+
+        elif excedeu_numero_saques:
+            print ("Saque Inválido! Você já realizou o numero máximo (3) de saques por dia.")
+
+        else:
+            saldo -= saque
+            numero_saque += 1
+            extrato += (f"Saque Realizado: R$ {saque:.2f}\n")
+            print(f"Saque Realizado!, \n Seu saldo atual é de: R$ {saldo}")    
+    elif operação == 3:
+        print("\nImprimindo Extrato...\n\n")
+        print("-------- Extrato --------")
+        print(extrato) 
+        print(f"\nSaldo: R$ {saldo:.2f}")
+        print("-------------------------")
+
+    elif operação == 4:
+        break
+
+    else:
+        print("""Operação inválida!! 
+              Selecione uma operação Válida.
+              """) 
+        
+
+print("Obrigado")
+
+    
