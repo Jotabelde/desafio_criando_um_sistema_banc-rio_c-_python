@@ -1,6 +1,10 @@
-from abc import ABC, abstractclassmethod, abstractproperty
+from abc import ABC, abstractmethod
 from datetime import datetime
 import textwrap
+import os
+from pathlib import Path
+import csv
+caminho_da_pasta = Path ("/Volumes/PortableSSD/aulas_python/desafios/transacoes.csv")
 
 class Cliente:
     def __init__(self, endereço):
@@ -19,6 +23,9 @@ class Pessoa_Fisíca(Cliente):
         self.nome = nome
         self.cpf = cpf
         self.data_nascimento = data_nascimento
+
+    def __repr__(self) -> str:
+        return f"<{self.__class__.__name__}: ({self.cpf})>"
 
 class Conta:
     def __init__(self, numero, cliente):
@@ -96,12 +103,17 @@ class Conta_Corrente(Conta):
             print("Saque Inválido! Você já realizou o número máximo (3 saques) de saques por dia.")
         
         else:
-            if super().sacar(valor_saque):  # Verifica se o saque foi bem-sucedido
-                saque = Saque(valor_saque)  # Cria uma nova transação de saque
-                self.historico.adicionar_transacao(saque)  # Adiciona a transação ao histórico
+            if super().sacar(valor_saque): 
+                saque = Saque(valor_saque)
+                self.historico.adicionar_transacao(saque)
+                return True  # <-- isso estava faltando
+
         
         return False
     
+    def __repr__(self):
+        return f"<{self.__class__.__name__}: ('{self.agencia}'' , '{self.numero}', '{self.cliente.nome}')>"
+
     def __str__(self):
         return f"""\ 
                 Agência:    {self.agencia}
@@ -133,14 +145,14 @@ class Historico:
 
 class Transacao(ABC):
     @property
-    @abstractproperty
+    @abstractmethod
     def valor(self):
         pass
 
-    @abstractclassmethod
+    @abstractmethod
     def registrar(self):
         pass
-
+    
 class Saque(Transacao):
     def __init__(self, valor):
         self._valor = valor
@@ -155,6 +167,7 @@ class Saque(Transacao):
         if sucesso_transacao:
             conta.historico.adicionar_transacao(self)
 
+
 class Deposito(Transacao):
     def __init__(self, valor_deposito):
         self._valor_deposito = valor_deposito
@@ -168,6 +181,30 @@ class Deposito(Transacao):
 
         if sucesso_transacao:
             conta.historico.adicionar_transacao(self)
+
+def log_transacao(func):
+    def envelope(*args, **kwargs):
+        resultado = func(*args, **kwargs)
+
+        if resultado is None:
+            return
+
+        conta = resultado  # resultado retornado da função decorada
+
+        ultima_transacao = conta.historico.transacoes[-1]
+        tipo = ultima_transacao["tipo"]
+        valor = ultima_transacao["valor"]
+        data = ultima_transacao["data"]
+        nome = conta.cliente.nome
+        cpf = conta.cliente.cpf
+        agencia = conta.agencia
+        numero = conta.numero
+
+        with open(caminho_da_pasta, "a", newline="") as arquivo:
+            arquivo.write(f"{nome},{cpf},{agencia},{numero},{tipo},{valor},{data}\n")
+
+        return resultado
+    return envelope
 
 def criar_cliente(clientes):
     cpf = input("Informe o seu CPF (somente números): ")
@@ -211,6 +248,7 @@ def recuperar_conta_cliente(cliente):
 
     return cliente.contas[0]
 
+@log_transacao
 def depositar(clientes):
     cpf = input("Informe o seu CPF (somente números): ")
     cliente = verificar_cpf_existe(cpf, clientes)
@@ -231,6 +269,7 @@ def depositar(clientes):
     # Acesso ao saldo da conta
     print(f"\nDepósito realizado, às {datetime.now().strftime('%d/%m/%Y %H:%M')}\nSeu saldo atual é de R$ {conta.saldo:.2f}")
 
+@log_transacao
 def sacar(clientes):
     cpf = input("Informe o seu CPF (somente números): ")
     cliente = verificar_cpf_existe(cpf, clientes)
@@ -251,7 +290,7 @@ def sacar(clientes):
     # Acesso ao saldo da conta
     print(f"\nSaque realizado, às {datetime.now().strftime('%d/%m/%Y %H:%M')}\nSeu saldo atual é de R$ {conta.saldo:.2f}")
 
-# Agora você pode usar o método exibir_extrato para mostrar as transações
+
 def exibir_extrato(clientes):
     cpf = input("Informe o seu CPF (somente números): ")
     cliente = verificar_cpf_existe(cpf, clientes)
@@ -264,9 +303,6 @@ def exibir_extrato(clientes):
     if conta:
         conta.historico.exibir_extrato()
 
-# Exemplo de como chamar o método mostrar_extrato
-# mostrar_extrato(clientes)
-
 def verificar_cpf_existe(cpf, clientes):
     
     clientes_filtrados = [cliente for cliente in clientes if cliente.cpf == cpf]
@@ -276,50 +312,89 @@ def verificar_cpf_existe(cpf, clientes):
     
     return None
 
+def carregar_dados(caminho, clientes, contas):
+    if not caminho.exists():
+        return  # Arquivo ainda não existe, começa vazio
+
+    clientes_dict = {}
+    contas_dict = {}
+
+    with open(caminho, newline='') as arquivo:
+        leitor = csv.reader(arquivo)
+        for linha in leitor:
+            nome, cpf, agencia, numero, tipo, valor, data_str = linha
+
+            # Criar cliente se não existir
+            if cpf not in clientes_dict:
+                cliente = Pessoa_Fisíca(nome=nome, cpf=cpf, data_nascimento="01/01/1970", endereço="Desconhecido")
+                clientes_dict[cpf] = cliente
+                clientes.append(cliente)
+            else:
+                cliente = clientes_dict[cpf]
+
+            # Criar conta se não existir
+            if numero not in contas_dict:
+                conta = Conta_Corrente.nova_conta(numero=numero, cliente=cliente)
+                contas_dict[numero] = conta
+                contas.append(conta)
+                cliente.adicionar_conta(conta)
+            else:
+                conta = contas_dict[numero]
+
+            # Criar transação e adicionar ao histórico
+            valor = float(valor)
+            if tipo == "Deposito":
+                transacao = Deposito(valor)
+            elif tipo == "Saque":
+                transacao = Saque(valor)
+            else:
+                continue  # Tipo desconhecido, ignora
+
+            # Adiciona transação ao histórico (ajustar data se quiser usar a original)
+            conta.historico.adicionar_transacao(transacao)
+
 def main():
     clientes = []
     contas = []
-    menu = '''\n 
-                ====== Escolha uma Operação ======
-                [1] \tCriar Usuário
-                [2] \tCriar Conta
-                [3] \tDepositar
-                [4] \tSacar
-                [5] \tExtrato
-                [6] \tListar Conta
-                [7] \tSair
-                ==================================\n
-                ''' 
+    carregar_dados(caminho_da_pasta, clientes, contas)
+    menu = '''\n
+    ====== Escolha uma Operação ======
+    [1] Criar Usuário
+    [2] Criar Conta
+    [3] Depositar
+    [4] Sacar
+    [5] Extrato
+    [6] Listar Contas
+    [7] Sair
+    ==================================\n
+    '''
 
     while True:
-        operação = int(input(menu))
+        try:
+            opcao = int(input(menu))
+        except ValueError:
+            print("Entrada inválida. Digite um número de 1 a 7.")
+            continue
         
-        if  operação == 1:
+        if opcao == 1:
             criar_cliente(clientes)
-        
-        elif operação == 2:
+        elif opcao == 2:
             numero_conta = len(contas) + 1 
             criar_conta(clientes, numero_conta, contas)
-        
-        elif operação == 3:
+        elif opcao == 3:
             depositar(clientes)
-        
-        elif operação == 4:
+        elif opcao == 4:
             sacar(clientes)
-        
-        elif operação == 5:
+        elif opcao == 5:
             exibir_extrato(clientes)
-        
-        elif operação == 6:
-            listar_contas(contas) 
-        
-        elif operação == 7:
+        elif opcao == 6:
+            listar_contas(contas)
+        elif opcao == 7:
+            print("\nEncerrando o sistema. Obrigado por utilizar nossos serviços.")
             break
+        else:
+            print("Opção inválida. Tente novamente.")
 
-        else: 
-            print("""Operação inválida!! 
-            Selecione uma operação Válida.
-            """) 
-
-
-print(main())
+# Execução direta
+if __name__ == "__main__":
+    main()
