@@ -1,28 +1,51 @@
-## Descrição do Código:
+# 💼 Sistema Bancário em Python
 
-Este código implementa um sistema bancário simples que permite ao usuário realizar 5 operações principais: depositar, sacar e ver o extrato da conta. Essas operações só podem ser realizadas se o cpf informado já estiver vinculado a um usuário e uma conta.  Ele opera com a moeda base em Reais (R$) e estabelece regras claras para as transações de saque, limitando a quantidade diária que pode ser sacada, bem como o número máximo de saques permitidos por dia.
+Este é um projeto de terminal que simula um sistema bancário simples, com suporte a **clientes**, **contas** e **transações**, como **saques** e **depósitos**. O sistema também realiza o **registro e persistência de dados** em um arquivo `.csv`.
 
-## Funcionalidades:
-# Depósito:
-O usuário pode adicionar fundos à sua conta. O valor do depósito é somado ao saldo atual, e a transação é registrada no extrato bancário.
+---
 
-# Saque:
-O saque possui duas restrições principais para segurança e controle financeiro:
+## 🧩 Funcionalidades
 
-Limite diário de saque: o usuário pode sacar no máximo R$ 500,00 por dia.
-Limite de saques por dia: o usuário pode realizar no máximo 3 saques por dia.
-Se o usuário tentar exceder qualquer um desses limites, o saque será negado. Cada saque aprovado é subtraído do saldo e registrado no extrato bancário.
-# Ver Extrato:
-O usuário pode visualizar um histórico de todas as transações (depósitos e saques) realizadas. O extrato exibe todas as operações e o saldo final da conta. Além de informar a data e os horários de cada operação.
+- ✅ Cadastro de cliente (Pessoa Física)
+- ✅ Criação de conta corrente
+- ✅ Depósito com validação de valor
+- ✅ Saque com limite de valor e quantidade diária
+- ✅ Emissão de extrato com histórico de transações
+- ✅ Listagem de contas cadastradas
+- ✅ Salvamento automático de todas as transações em arquivo `.csv`
+- ✅ Carregamento de dados históricos ao iniciar o programa
 
-# Criar Usuário:
-O usuário pode criar seu usuário adicionando suas informações pessoais (cpf, nome, data de nascimento, endereço).
+---
 
-# Criar uma conta 
-O usuário pode criar sua conta vinculada a um cpf já existente.
+## 🗃️ Estrutura de Classes
 
-# Regras:
-O sistema não permite que as operações depositar, sacar, ver extrato sejam realizadas sem já possuir um cpf cadastrado a um usuário e uma conta vinculada a esse cpf.
-O sistema bloqueia qualquer tentativa de saque se o saldo disponível for insuficiente.
-O saque diário máximo de R$ 500,00 e o limite de até 3 saques por dia garantem um controle rigoroso sobre as retiradas de dinheiro.
-O limite maximo de operações (saque, deposito) é de 10 operações. Caso o usário tentar realizar mais que essa quantidade será informado que execedeu o número de operações.
+- `Cliente` (classe base)
+- `Pessoa_Fisíca` (herda de `Cliente`)
+- `Conta` (classe base)
+- `Conta_Corrente` (herda de `Conta`)
+- `Transacao` (classe abstrata)
+  - `Saque`
+  - `Deposito`
+- `Historico` (registra todas as transações da conta)
+
+---
+
+## 💾 Persistência de Dados
+
+- As transações são salvas no arquivo `transacoes.csv` no caminho
+
+
+- Ao iniciar o programa, os dados do CSV são carregados automaticamente e recriam as instâncias de clientes, contas e seus históricos.
+
+---
+
+## 🏁 Execução
+
+1. Verifique se o caminho do arquivo CSV (`caminho_da_pasta`) está correto no início do script.
+2. Execute o programa com:
+
+ ```bash
+ python seu_arquivo.py
+
+
+
